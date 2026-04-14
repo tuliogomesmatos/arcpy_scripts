@@ -1,9 +1,8 @@
-import arcpy, os
+# -*- coding: utf-8 -*-
+import arcpy, os, unicodedata
 
-# Pasta de saida
-output_folder = r"C:\Users\tulio\Downloads\shapes"
+output_folder = u"G:\\Meu Drive\\CLIENTES\CLEBSON - PONTE ALTA\\SIG\\TODOS OS SHAPES"
 
-# Compatível com Python 2.7
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
@@ -13,21 +12,28 @@ layers = arcpy.mapping.ListLayers(mxd)
 exported = []
 skipped = []
 
+def limpar_nome(name):
+    if isinstance(name, str):
+        name = name.decode("utf-8", errors="replace")
+    name = unicodedata.normalize("NFKD", name)
+    name = u"".join(c for c in name if not unicodedata.combining(c))
+    name = u"".join(c if c.isalnum() or c in u"_-" else u"_" for c in name)
+    return name
+
 for layer in layers:
     if layer.isGroupLayer or not layer.isFeatureLayer:
-        skipped.append(layer.name)
         continue
 
-    safe_name = "".join(c if c.isalnum() or c in "_-" else "_" for c in layer.name)
-    output_path = os.path.join(output_folder, safe_name + ".shp")
+    safe_name = limpar_nome(layer.name)
+    output_path = output_folder + u"\\" + safe_name + u".shp"
 
     try:
         arcpy.CopyFeatures_management(layer, output_path)
-        exported.append(layer.name)
-        print("Exportado: " + layer.name)
+        exported.append(safe_name)
+        print("Exportado: " + safe_name.encode("ascii", "replace"))
     except Exception as e:
-        skipped.append(layer.name)
-        print("Erro em '" + layer.name + "': " + str(e))
+        skipped.append(safe_name)
+        print("Erro: " + safe_name.encode("ascii", "replace") + " - " + str(e))
 
-print("\n" + str(len(exported)) + " camadas exportadas para: " + output_folder)
-print(str(len(skipped)) + " camadas ignoradas")
+print("\n" + str(len(exported)) + " exportadas")
+print(str(len(skipped)) + " ignoradas")
